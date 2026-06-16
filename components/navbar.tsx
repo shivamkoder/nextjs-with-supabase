@@ -26,7 +26,7 @@ export function Navbar() {
 
       {/* CTA */}
       // after the nav links list, before the CTA button
-      <div className="flex items-center gap-9">
+      <div className="flex items-center gap-12">
       <Link
         href="/auth/login"
         className="text-sm text-white/50 hover:text-white transition-colors"
