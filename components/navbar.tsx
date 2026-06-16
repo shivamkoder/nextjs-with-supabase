@@ -32,6 +32,9 @@ export function Navbar() {
       >
         Sign in
       </Link>
+      {  
+
+      }
 
       <Link
         href="/auth/sign-up"
