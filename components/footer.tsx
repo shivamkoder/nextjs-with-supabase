@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="w-full flex items-center justify-between px-6 md:px-0 py-5 border-t border-white/[0.07]">
       <span className="text-xs text-white/25">
-        © {new Date().getFullYear()} Taskly. All rights reserved.
+        © 2026 Taskly. All rights reserved..
       </span>
       <nav className="flex gap-5" aria-label="Footer links">
         {["Privacy", "Terms", "Contact"].map((link) => (
