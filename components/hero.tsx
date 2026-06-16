@@ -47,9 +47,7 @@ export function Hero() {
         <div className="w-72 rounded-2xl border border-white/10 bg-[#1a1a1a] p-5">
           <div className="flex items-center justify-between mb-5">
             <span className="text-sm font-semibold text-white">Today&apos;s tasks</span>
-            <span className="text-xs text-white/35">
-              Jun 16, 2026
-            </span>
+            <span className="text-xs text-white/35">Jun 16, 2026</span>
           </div>
 
           {[
