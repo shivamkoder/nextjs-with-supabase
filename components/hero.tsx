@@ -48,11 +48,7 @@ export function Hero() {
           <div className="flex items-center justify-between mb-5">
             <span className="text-sm font-semibold text-white">Today&apos;s tasks</span>
             <span className="text-xs text-white/35">
-              {new Date().toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              Jun 16, 2026
             </span>
           </div>
 
