@@ -7,6 +7,8 @@ export function Navbar() {
       <Link href="/" className="text-xl font-bold text-white tracking-tight">
         Task<span className="text-[#e8553e]">ly</span>.
       </Link>
+      // after the nav links list, before the CTA button
+      
 
       {/* Links */}
       <ul className="hidden md:flex items-center gap-7 list-none">
@@ -23,6 +25,14 @@ export function Navbar() {
       </ul>
 
       {/* CTA */}
+      // after the nav links list, before the CTA button
+      <Link
+        href="/auth/login"
+        className="text-sm text-white/50 hover:text-white transition-colors"
+      >
+        Sign in
+      </Link>
+
       <Link
         href="/auth/sign-up"
         className="rounded-full bg-[#e8553e] px-5 py-2 text-sm font-medium text-white hover:bg-[#d4442d] transition-colors"
