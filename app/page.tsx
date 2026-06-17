@@ -1,21 +1,45 @@
-import { Navbar } from "@/components/navbar";
-import { Hero } from "@/components/hero";
-import { Features } from "@/components/features";
-import { Footer } from "@/components/footer";
+import { Suspense } from "react";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { Dashboard } from "@/components/dashboard/dashboard";
 
-export default function Home() {
+async function DashboardContent() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+
+  if (error || !data?.claims) {
+    redirect("/auth/login");
+  }
+
+  const userId = data.claims.sub as string;
+
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("user_id", userId)
+    .order("due_date", { ascending: true });
+
+  return <Dashboard userId={userId} initialTasks={tasks ?? []} />;
+}
+
+export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-[#0f0f0f] flex flex-col">
-      <div className="w-full max-w-5xl mx-auto flex flex-col flex-1 px-0">
-        <Navbar />
-
-        <div className="flex-1 flex flex-col">
-          <Hero />
-          <Features />
-        </div>
-
-        <Footer />
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-3xl font-extrabold text-white">My Tasks</h1>
+        <p className="text-sm text-white/40 mt-1">
+          Stay on top of everything that matters.
+        </p>
       </div>
-    </main>
+      <Suspense
+        fallback={
+          <div className="rounded-xl border border-white/[0.07] bg-[#161616] px-6 py-14 text-center">
+            <p className="text-sm text-white/30">Loading your tasks...</p>
+          </div>
+        }
+      >
+        <DashboardContent />
+      </Suspense>
+    </div>
   );
 }
