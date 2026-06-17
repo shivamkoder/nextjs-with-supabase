@@ -1,19 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface TaskFormProps {
   userId: string;
+  onTaskAdded: (task: {
+    id: string;
+    title: string;
+    description: string | null;
+    due_date: string;
+    status: "pending" | "completed" | "missed";
+  }) => void;
 }
 
-export function TaskForm({ userId }: TaskFormProps) {
-  const router = useRouter();
+export function TaskForm({ userId, onTaskAdded }: TaskFormProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -37,20 +41,27 @@ export function TaskForm({ userId }: TaskFormProps) {
     setLoading(true);
     const supabase = createClient();
 
-    const { error: insertError } = await supabase.from("tasks").insert({
-      user_id: userId,
-      title,
-      description: description || null,
-      due_date: dueDatetime.toISOString(),
-      status: "pending",
-    });
+    const { data, error: insertError } = await supabase
+      .from("tasks")
+      .insert({
+        user_id: userId,
+        title,
+        description: description || null,
+        due_date: dueDatetime.toISOString(),
+        status: "pending",
+      })
+      .select()
+      .single();
 
     setLoading(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (insertError || !data) {
+      setError(insertError?.message ?? "Failed to add task.");
       return;
     }
+
+    // Pass the new task up to the parent so it appears instantly
+    onTaskAdded(data);
 
     // Reset form
     setTitle("");
@@ -58,7 +69,6 @@ export function TaskForm({ userId }: TaskFormProps) {
     setDueDate("");
     setDueTime("");
     setOpen(false);
-    router.refresh();
   };
 
   return (
@@ -77,7 +87,6 @@ export function TaskForm({ userId }: TaskFormProps) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-white">New Task</h2>
 
-          {/* Title */}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-white/40">
               Title <span className="text-[#e8553e]">*</span>
@@ -91,11 +100,9 @@ export function TaskForm({ userId }: TaskFormProps) {
             />
           </div>
 
-          {/* Description */}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-white/40">
-              Description{" "}
-              <span className="text-white/25">(optional)</span>
+              Description <span className="text-white/25">(optional)</span>
             </label>
             <textarea
               value={description}
@@ -106,7 +113,6 @@ export function TaskForm({ userId }: TaskFormProps) {
             />
           </div>
 
-          {/* Date + Time */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-white/40">
@@ -134,7 +140,6 @@ export function TaskForm({ userId }: TaskFormProps) {
 
           {error && <p className="text-xs text-red-400">{error}</p>}
 
-          {/* Actions */}
           <div className="flex items-center gap-3 pt-1">
             <button
               type="submit"
@@ -145,10 +150,7 @@ export function TaskForm({ userId }: TaskFormProps) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setOpen(false);
-                setError(null);
-              }}
+              onClick={() => { setOpen(false); setError(null); }}
               className="text-sm text-white/40 hover:text-white transition-colors"
             >
               Cancel
