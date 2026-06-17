@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type TaskStatus = "pending" | "completed" | "missed";
@@ -15,7 +14,8 @@ interface Task {
 }
 
 interface TaskListProps {
-  initialTasks: Task[];
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
 function formatDueDate(iso: string) {
@@ -36,44 +36,32 @@ function StatusBadge({ status }: { status: TaskStatus }) {
     missed: "bg-red-500/15 text-red-400",
   };
   return (
-    <span
-      className={`text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-0.5 ${styles[status]}`}
-    >
+    <span className={`text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-0.5 ${styles[status]}`}>
       {status}
     </span>
   );
 }
 
-export function TaskList({ initialTasks }: TaskListProps) {
-  const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-
-  // Auto-mark overdue pending tasks as missed
+export function TaskList({ tasks, setTasks }: TaskListProps) {
   const autoMarkMissed = useCallback(async () => {
     const now = new Date();
     const supabase = createClient();
-
     const toMiss = tasks.filter(
       (t) => t.status === "pending" && new Date(t.due_date) < now
     );
-
     if (toMiss.length === 0) return;
-
     const ids = toMiss.map((t) => t.id);
     const { error } = await supabase
       .from("tasks")
       .update({ status: "missed" })
       .in("id", ids);
-
     if (!error) {
       setTasks((prev) =>
-        prev.map((t) => (ids.includes(t.id) ? { ...t, status: "missed" } : t))
+        prev.map((t) => (ids.includes(t.id) ? { ...t, status: "missed" as TaskStatus } : t))
       );
     }
-  }, [tasks]);
+  }, [tasks, setTasks]);
 
-  // Run on mount and every 60 seconds
   useEffect(() => {
     autoMarkMissed();
     const interval = setInterval(autoMarkMissed, 60_000);
@@ -81,30 +69,19 @@ export function TaskList({ initialTasks }: TaskListProps) {
   }, [autoMarkMissed]);
 
   const updateStatus = async (id: string, status: TaskStatus) => {
-    setLoadingId(id);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("tasks")
-      .update({ status })
-      .eq("id", id);
-
+    const { error } = await supabase.from("tasks").update({ status }).eq("id", id);
     if (!error) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status } : t))
-      );
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
     }
-    setLoadingId(null);
   };
 
   const deleteTask = async (id: string) => {
-    setLoadingId(id);
     const supabase = createClient();
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (!error) {
       setTasks((prev) => prev.filter((t) => t.id !== id));
     }
-    setLoadingId(null);
-    router.refresh();
   };
 
   if (tasks.length === 0) {
@@ -116,7 +93,6 @@ export function TaskList({ initialTasks }: TaskListProps) {
     );
   }
 
-  // Group by status
   const pending = tasks.filter((t) => t.status === "pending");
   const completed = tasks.filter((t) => t.status === "completed");
   const missed = tasks.filter((t) => t.status === "missed");
@@ -124,7 +100,6 @@ export function TaskList({ initialTasks }: TaskListProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Summary row */}
       <div className="flex items-center gap-4 mb-2 text-xs text-white/35">
         <span>{pending.length} pending</span>
         <span className="text-white/15">•</span>
@@ -133,9 +108,7 @@ export function TaskList({ initialTasks }: TaskListProps) {
         <span className="text-red-400">{missed.length} missed</span>
       </div>
 
-      {/* Task rows */}
       {ordered.map((task) => {
-        const isLoading = loadingId === task.id;
         const isPending = task.status === "pending";
         const isCompleted = task.status === "completed";
 
@@ -150,7 +123,6 @@ export function TaskList({ initialTasks }: TaskListProps) {
                 : "border-white/[0.07] bg-[#161616]"
             }`}
           >
-            {/* Complete toggle circle */}
             <button
               onClick={() =>
                 isPending
@@ -159,7 +131,7 @@ export function TaskList({ initialTasks }: TaskListProps) {
                   ? updateStatus(task.id, "pending")
                   : undefined
               }
-              disabled={isLoading || task.status === "missed"}
+              disabled={task.status === "missed"}
               title={isPending ? "Mark complete" : isCompleted ? "Mark pending" : "Missed"}
               className={`mt-0.5 w-5 h-5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
                 isCompleted
@@ -170,66 +142,46 @@ export function TaskList({ initialTasks }: TaskListProps) {
               }`}
             >
               {isCompleted && (
-                <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                  <path
-                    d="M2 6l3 3 5-5"
-                    stroke="#0f0f0f"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6l3 3 5-5" stroke="#0f0f0f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
               {task.status === "missed" && (
-                <svg width="8" height="8" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                  <path
-                    d="M2 2l8 8M10 2l-8 8"
-                    stroke="#f87171"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
+                <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 2l8 8M10 2l-8 8" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               )}
             </button>
 
-            {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-3 flex-wrap">
-                <span
-                  className={`text-sm font-medium ${
-                    isCompleted
-                      ? "line-through text-white/30"
-                      : task.status === "missed"
-                      ? "text-white/40"
-                      : "text-white"
-                  }`}
-                >
+                <span className={`text-sm font-medium ${
+                  isCompleted ? "line-through text-white/30"
+                  : task.status === "missed" ? "text-white/40"
+                  : "text-white"
+                }`}>
                   {task.title}
                 </span>
                 <StatusBadge status={task.status} />
               </div>
 
               {task.description && (
-                <p className="text-xs text-white/35 mt-0.5 truncate">
-                  {task.description}
-                </p>
+                <p className="text-xs text-white/35 mt-0.5 truncate">{task.description}</p>
               )}
 
               <div className="flex items-center gap-3 mt-2">
                 <span className="flex items-center gap-1 text-[11px] text-white/30">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 6v6l4 2" />
                   </svg>
                   {formatDueDate(task.due_date)}
                 </span>
 
-                {/* Action buttons */}
                 <div className="flex items-center gap-2 ml-auto">
                   {isPending && (
                     <button
                       onClick={() => updateStatus(task.id, "missed")}
-                      disabled={isLoading}
                       className="text-[11px] text-red-400/60 hover:text-red-400 transition-colors"
                     >
                       Mark missed
@@ -238,7 +190,6 @@ export function TaskList({ initialTasks }: TaskListProps) {
                   {task.status === "missed" && (
                     <button
                       onClick={() => updateStatus(task.id, "pending")}
-                      disabled={isLoading}
                       className="text-[11px] text-[#efae4a]/60 hover:text-[#efae4a] transition-colors"
                     >
                       Reopen
@@ -246,7 +197,6 @@ export function TaskList({ initialTasks }: TaskListProps) {
                   )}
                   <button
                     onClick={() => deleteTask(task.id)}
-                    disabled={isLoading}
                     className="text-[11px] text-white/20 hover:text-red-400 transition-colors"
                   >
                     Delete
