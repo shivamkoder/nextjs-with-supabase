@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { TaskForm } from "@/components/dashboard/task-form";
-import { TaskList } from "@/components/dashboard/task-list";
+import { Dashboard } from "@/components/dashboard/dashboard";
 
 async function DashboardContent() {
   const supabase = await createClient();
@@ -20,12 +19,7 @@ async function DashboardContent() {
     .eq("user_id", userId)
     .order("due_date", { ascending: true });
 
-  return (
-    <>
-      <TaskForm userId={userId} />
-      <TaskList initialTasks={tasks ?? []} />
-    </>
-  );
+  return <Dashboard userId={userId} initialTasks={tasks ?? []} />;
 }
 
 export default function DashboardPage() {
@@ -37,7 +31,6 @@ export default function DashboardPage() {
           Stay on top of everything that matters.
         </p>
       </div>
-
       <Suspense
         fallback={
           <div className="rounded-xl border border-white/[0.07] bg-[#161616] px-6 py-14 text-center">
