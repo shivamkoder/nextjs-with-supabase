@@ -1,9 +1,10 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TaskForm } from "@/components/dashboard/task-form";
 import { TaskList } from "@/components/dashboard/task-list";
 
-export default async function DashboardPage() {
+async function DashboardContent() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
 
@@ -13,7 +14,6 @@ export default async function DashboardPage() {
 
   const userId = data.claims.sub as string;
 
-  // Fetch all tasks for this user, newest first
   const { data: tasks } = await supabase
     .from("tasks")
     .select("*")
@@ -21,8 +21,16 @@ export default async function DashboardPage() {
     .order("due_date", { ascending: true });
 
   return (
+    <>
+      <TaskForm userId={userId} />
+      <TaskList initialTasks={tasks ?? []} />
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
     <div className="flex flex-col gap-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-white">My Tasks</h1>
         <p className="text-sm text-white/40 mt-1">
@@ -30,11 +38,15 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Add task form */}
-      <TaskForm userId={userId} />
-
-      {/* Task list */}
-      <TaskList initialTasks={tasks ?? []} />
+      <Suspense
+        fallback={
+          <div className="rounded-xl border border-white/[0.07] bg-[#161616] px-6 py-14 text-center">
+            <p className="text-sm text-white/30">Loading your tasks...</p>
+          </div>
+        }
+      >
+        <DashboardContent />
+      </Suspense>
     </div>
   );
 }
